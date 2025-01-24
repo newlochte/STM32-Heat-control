@@ -57,6 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BMP2_SCL_Pin GPIO_PIN_2
+#define BMP2_SCL_GPIO_Port GPIOE
+#define BMP2_CSB_Pin GPIO_PIN_4
+#define BMP2_CSB_GPIO_Port GPIOE
+#define BMP2_SDO_Pin GPIO_PIN_5
+#define BMP2_SDO_GPIO_Port GPIOE
+#define BMP2_SDA_Pin GPIO_PIN_6
+#define BMP2_SDA_GPIO_Port GPIOE
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
@@ -67,6 +75,8 @@ void Error_Handler(void);
 #define RMII_REF_CLK_GPIO_Port GPIOA
 #define RMII_MDIO_Pin GPIO_PIN_2
 #define RMII_MDIO_GPIO_Port GPIOA
+#define PWM_Resistor_Pin GPIO_PIN_6
+#define PWM_Resistor_GPIO_Port GPIOA
 #define RMII_CRS_DV_Pin GPIO_PIN_7
 #define RMII_CRS_DV_GPIO_Port GPIOA
 #define RMII_RXD0_Pin GPIO_PIN_4
