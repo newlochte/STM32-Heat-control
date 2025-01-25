@@ -1,0 +1,12 @@
+{
+  "files.associations": {
+    "bmp2_config.h": "c",
+    "i2c.h": "c",
+    "pwm_device.h": "c",
+    "command_parser.h": "c",
+    "pwm_devices_config.h": "c",
+    "stdint.h": "c",
+    "tim.h": "c",
+    "pid_config.h": "c"
+  }
+}

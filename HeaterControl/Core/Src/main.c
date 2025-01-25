@@ -20,13 +20,19 @@
 #include "main.h"
 #include "eth.h"
 #include "i2c.h"
+#include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "usb_otg.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "pwm_devices_config.h"
+#include "bmp2_config.h"
+#include "pid_config.h"
+#include <stdio.h>
+#include "command_parser.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,7 +42,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PRECISION 1000
+#define TRANSMIT_TIMEOUT 100
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,7 +54,13 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint16_t response_len = 0;
+uint8_t response_buffer[128];
+uint8_t tx_buffer[12];
 
+float setpoint = 50;
+
+double temp;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,7 +71,79 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim == &htim2)
+  {
+    BMP2_ReadData(&bmp2dev, NULL, &temp);
+    float error = setpoint - temp;
+    float signal = PID_calulate_signal(&pid, error);
+    if (signal > 0)
+    {
+      PWM_DEVICE_PWM_WriteDuty(&heater, signal * 100);
+      PWM_DEVICE_PWM_WriteDuty(&cooler, 0);
+    }
+    else
+    {
+      PWM_DEVICE_PWM_WriteDuty(&cooler, -1 * signal * 100);
+      PWM_DEVICE_PWM_WriteDuty(&heater, 0);
+    }
+  }
+}
 
+// Recive UART communication
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  int tmp_int;
+  if (huart == &huart3)
+  {
+    Command_TypeDef command = parse_commmand(tx_buffer, sizeof(tx_buffer));
+    switch (command.type)
+    {
+    case BAD_ARG:
+      response_len = sprintf((char *)response_buffer, "Złe polecenie \"%.8s\"\r", tx_buffer);
+      break;
+    case READ_TEMPERATURE:
+      if (BMP2_ReadData(&bmp2dev, NULL, &temp) < 0)
+        response_len = sprintf((char *)response_buffer, "Failed to read sensor");
+      else
+      {
+        tmp_int = PRECISION * temp;
+        response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      }
+      break;
+    case READ_FAN_PWM:
+      tmp_int = PRECISION * PWM_DEVICE_PWM_ReadDuty(&cooler);
+      response_len = sprintf((char *)response_buffer, "Fan duty: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      break;
+    case READ_RESISTOR_PWM:
+      tmp_int = PRECISION * PWM_DEVICE_PWM_ReadDuty(&heater);
+      response_len = sprintf((char *)response_buffer, "Resistor duty: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      break;
+    case WRITE_FAN_PWM:
+      tmp_int = PRECISION * command.value;
+      response_len = sprintf((char *)response_buffer, "Fan duty set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      PWM_DEVICE_PWM_WriteDuty(&cooler, command.value);
+      break;
+    case WRITE_RESISTOR_PWM:
+      tmp_int = PRECISION * command.value;
+      response_len = sprintf((char *)response_buffer, "Resistor duty set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      PWM_DEVICE_PWM_WriteDuty(&heater, command.value);
+      break;
+    case WRITE_SETPOINT:
+      tmp_int = PRECISION * command.value;
+      response_len = sprintf((char *)response_buffer, "Setpoint set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      setpoint = command.value;
+      break;
+    default:
+      response_len = sprintf((char *)response_buffer, "Reached Unreachable! Did you forget something?\r");
+      break;
+    }
+    HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
+
+    HAL_UART_Receive_IT(&huart3, tx_buffer, sizeof(tx_buffer));
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -94,8 +179,16 @@ int main(void)
   MX_I2C1_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
+  MX_SPI4_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-
+  BMP2_Init(&bmp2dev);
+  HAL_TIM_Base_Start_IT(&htim2);
+  PWM_DEVICE_PWM_Init(&heater);
+  PWM_DEVICE_PWM_Init(&cooler);
+  HAL_UART_Receive_IT(&huart3, tx_buffer, sizeof(tx_buffer));
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -48,11 +48,21 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/bmp2_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/bmp2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/pwm.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/pwm_device.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/pwm_devices_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/dio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/command_parser.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/pid.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/pid_config.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Inc
 )
 
 # Add project symbols (macros)
