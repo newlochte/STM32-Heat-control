@@ -88,3 +88,11 @@ void lcd_send_string(char *str)
 	while (*str)
 		lcd_send_data(*str++);
 }
+
+void lcd_send_string_frame(char text[2][16])
+{
+	lcd_put_cur(0, 0);
+	lcd_send_string(text[0]);
+	lcd_put_cur(1, 0);
+	lcd_send_string(text[1]);
+}

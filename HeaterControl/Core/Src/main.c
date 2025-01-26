@@ -61,7 +61,8 @@
 uint16_t response_len = 0;
 uint8_t response_buffer[128];
 uint8_t tx_buffer[12];
-char lcd_temp[16];
+char lcd_buffer[2][16];
+int tmp_int = 0;
 
 float setpoint = 30;
 
@@ -93,7 +94,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 
     if (counter != prev_counter)
     {
-      int tmp_int = PRECISION * setpoint;
+      tmp_int = PRECISION * setpoint;
       response_len = sprintf((char *)response_buffer, "Setpoint: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       HAL_UART_Transmit(&huart3, response_buffer, response_len, 100);
       prev_counter = counter;
@@ -105,9 +106,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim == &htim5)
   {
+    if (BMP2_ReadData(&bmp2dev, NULL, &temp) < 0)
+      response_len = sprintf((char *)response_buffer, "Failed to read sensor\r\n");
+    else
+    {
+      tmp_int = PRECISION * temp;
+      response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
+    }
     if (pid.state == PID_AUTO)
     {
-      BMP2_ReadData(&bmp2dev, NULL, &temp);
       float error = setpoint - temp;
       float signal = PID_calulate_signal(&pid, error);
       if (signal > 0)
@@ -120,13 +127,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         PWM_DEVICE_PWM_WriteDuty(&cooler, -1 * signal * 100.0 / pid.abs_max_signal);
         PWM_DEVICE_PWM_WriteDuty(&heater, 0);
       }
-    }
-    if (BMP2_ReadData(&bmp2dev, NULL, &temp) < 0)
-      response_len = sprintf((char *)response_buffer, "Failed to read sensor\r\n");
-    else
-    {
-      int tmp_int = PRECISION * temp;
-      response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
+      tmp_int = PRECISION * signal;
+      response_len = sprintf((char *)response_buffer, "Signal: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
     }
     LED_DIO_On(&led_green);
     HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
@@ -137,7 +139,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 // Recive UART communication
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-  int tmp_int;
   if (huart == &huart3)
   {
     Command_TypeDef command = parse_commmand(tx_buffer, sizeof(tx_buffer));
@@ -147,13 +148,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       response_len = sprintf((char *)response_buffer, "Złe polecenie \"%.8s\"\r\n", tx_buffer);
       break;
     case READ_TEMPERATURE:
-      if (BMP2_ReadData(&bmp2dev, NULL, &temp) < 0)
-        response_len = sprintf((char *)response_buffer, "Failed to read sensor\r\n");
-      else
-      {
-        tmp_int = PRECISION * temp;
-        response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
-      }
+      tmp_int = PRECISION * temp;
+      response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       break;
     case READ_FAN_PWM:
       tmp_int = PRECISION * PWM_DEVICE_PWM_ReadDuty(&cooler);
@@ -248,9 +244,6 @@ int main(void)
   HAL_UART_Receive_IT(&huart3, tx_buffer, sizeof(tx_buffer));
   lcd_init();
   lcd_clear();
-  sprintf(lcd_temp, "Hello, World!");
-  lcd_put_cur(0, 0);
-  lcd_send_string(lcd_temp);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -259,6 +252,11 @@ int main(void)
   {
     LED_DIO_Write(&led_red, (LED_DIO_State_TypeDef)PWM_DEVICE_PWM_ReadDuty(&heater) > 0);
     LED_DIO_Write(&led_blue, (LED_DIO_State_TypeDef)PWM_DEVICE_PWM_ReadDuty(&cooler) > 0);
+    tmp_int = PRECISION * setpoint;
+    sprintf((char *)lcd_buffer[0], "Setpoint: %2u.%02u", tmp_int / PRECISION, tmp_int % PRECISION);
+    tmp_int = PRECISION * temp;
+    sprintf((char *)lcd_buffer[1], "Temp: %2u.%03u", tmp_int / PRECISION, tmp_int % PRECISION);
+    lcd_send_string_frame(lcd_buffer);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

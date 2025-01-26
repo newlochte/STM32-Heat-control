@@ -8,6 +8,7 @@
     "stdint.h": "c",
     "tim.h": "c",
     "pid_config.h": "c",
-    "led.h": "c"
+    "led.h": "c",
+    "i2c_lcd.h": "c"
   }
 }
