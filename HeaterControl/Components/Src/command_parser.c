@@ -54,6 +54,10 @@ Command_TypeDef parse_commmand(uint8_t *command, size_t length)
     case 'S':
       cmd.type = WRITE_SETPOINT;
       break;
+    case 'p':
+    case 'P':
+      cmd.type = WRITE_PID_STATE;
+      break;
     default:
       cmd.type = BAD_ARG;
       return cmd;

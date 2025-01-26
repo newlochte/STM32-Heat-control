@@ -7,6 +7,7 @@
     "pwm_devices_config.h": "c",
     "stdint.h": "c",
     "tim.h": "c",
-    "pid_config.h": "c"
+    "pid_config.h": "c",
+    "led.h": "c"
   }
 }

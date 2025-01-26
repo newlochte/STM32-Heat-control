@@ -17,7 +17,8 @@ enum Command_type
   READ_SETPOINT,
   WRITE_FAN_PWM,
   WRITE_RESISTOR_PWM,
-  WRITE_SETPOINT
+  WRITE_SETPOINT,
+  WRITE_PID_STATE,
 };
 
 typedef struct

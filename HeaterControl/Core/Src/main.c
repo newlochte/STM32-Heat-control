@@ -33,6 +33,7 @@
 #include "pid_config.h"
 #include <stdio.h>
 #include "command_parser.h"
+#include "led_config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,7 +57,7 @@
 /* USER CODE BEGIN PV */
 uint16_t response_len = 0;
 uint8_t response_buffer[128];
-uint8_t tx_buffer[12];
+uint8_t tx_buffer[10];
 
 float setpoint = 50;
 
@@ -73,20 +74,23 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if (htim == &htim2)
+  if (htim == &htim5)
   {
-    BMP2_ReadData(&bmp2dev, NULL, &temp);
-    float error = setpoint - temp;
-    float signal = PID_calulate_signal(&pid, error);
-    if (signal > 0)
+    if (pid.state == PID_AUTO)
     {
-      PWM_DEVICE_PWM_WriteDuty(&heater, signal * 100);
-      PWM_DEVICE_PWM_WriteDuty(&cooler, 0);
-    }
-    else
-    {
-      PWM_DEVICE_PWM_WriteDuty(&cooler, -1 * signal * 100);
-      PWM_DEVICE_PWM_WriteDuty(&heater, 0);
+      BMP2_ReadData(&bmp2dev, NULL, &temp);
+      float error = setpoint - temp;
+      float signal = PID_calulate_signal(&pid, error);
+      if (signal > 0)
+      {
+        PWM_DEVICE_PWM_WriteDuty(&heater, signal * 100.0 / pid.abs_max_signal);
+        PWM_DEVICE_PWM_WriteDuty(&cooler, 0);
+      }
+      else
+      {
+        PWM_DEVICE_PWM_WriteDuty(&cooler, -1 * signal * 100.0 / pid.abs_max_signal);
+        PWM_DEVICE_PWM_WriteDuty(&heater, 0);
+      }
     }
   }
 }
@@ -120,6 +124,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       tmp_int = PRECISION * PWM_DEVICE_PWM_ReadDuty(&heater);
       response_len = sprintf((char *)response_buffer, "Resistor duty: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
       break;
+    case READ_SETPOINT:
+      tmp_int = PRECISION * setpoint;
+      response_len = sprintf((char *)response_buffer, "Setpoint: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      break;
     case WRITE_FAN_PWM:
       tmp_int = PRECISION * command.value;
       response_len = sprintf((char *)response_buffer, "Fan duty set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
@@ -134,6 +142,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       tmp_int = PRECISION * command.value;
       response_len = sprintf((char *)response_buffer, "Setpoint set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
       setpoint = command.value;
+      break;
+    case WRITE_PID_STATE:
+      response_len = sprintf((char *)response_buffer, "PID state changed to: %2d\r", command.value ? PID_AUTO : PID_MANUAL);
+      pid.state = command.value ? PID_AUTO : PID_MANUAL;
       break;
     default:
       response_len = sprintf((char *)response_buffer, "Reached Unreachable! Did you forget something?\r");
@@ -183,9 +195,11 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
   BMP2_Init(&bmp2dev);
   HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim5);
   PWM_DEVICE_PWM_Init(&heater);
   PWM_DEVICE_PWM_Init(&cooler);
   HAL_UART_Receive_IT(&huart3, tx_buffer, sizeof(tx_buffer));
@@ -195,12 +209,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    HAL_Delay(250);
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(250);
-    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-    HAL_Delay(250);
+    LED_DIO_Write(&led_red, (LED_DIO_State_TypeDef)PWM_DEVICE_PWM_ReadDuty(&heater) > 0);
+    LED_DIO_Write(&led_blue, (LED_DIO_State_TypeDef)PWM_DEVICE_PWM_ReadDuty(&cooler) > 0);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
