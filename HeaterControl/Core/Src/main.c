@@ -114,6 +114,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       tmp_int = PRECISION * temp;
       response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
     }
+    LED_DIO_On(&led_green);
+    HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
+    LED_DIO_Off(&led_green);
     if (pid.state == PID_AUTO)
     {
       float error = setpoint - temp;
