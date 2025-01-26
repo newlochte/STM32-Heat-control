@@ -35,6 +35,7 @@
 #include "command_parser.h"
 #include "led_config.h"
 #include "encoder_config.h"
+#include "i2c_lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +60,7 @@
 uint16_t response_len = 0;
 uint8_t response_buffer[128];
 uint8_t tx_buffer[12];
+char lcd_temp[16];
 
 float setpoint = 30;
 
@@ -220,6 +222,11 @@ int main(void)
   PWM_DEVICE_PWM_Init(&cooler);
   ENC_Init(&henc1);
   HAL_UART_Receive_IT(&huart3, tx_buffer, sizeof(tx_buffer));
+  lcd_init();
+  lcd_clear();
+  sprintf(lcd_temp, "Hello, World!");
+  lcd_put_cur(0, 0);
+  lcd_send_string(lcd_temp);
   /* USER CODE END 2 */
 
   /* Infinite loop */
