@@ -83,14 +83,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
   if (htim == &htim4)
   {
     uint32_t counter = ENC_GetCounter(&henc1);
+    // logic is flipped to have right movement incrementE
     if (prev_counter == 100 && counter == 0)
-      setpoint++;
+      setpoint--;
     if (prev_counter == 0 && counter == 100)
-      setpoint--;
-    if (prev_counter < counter)
       setpoint++;
-    if (prev_counter > counter)
+    if (prev_counter < counter)
       setpoint--;
+    if (prev_counter > counter)
+      setpoint++;
 
     if (counter != prev_counter)
     {
