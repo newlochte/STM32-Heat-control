@@ -47,6 +47,7 @@
 /* USER CODE BEGIN PD */
 #define PRECISION 1000
 #define TRANSMIT_TIMEOUT 100
+#define ENCODER_RESOLUTION 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -65,6 +66,7 @@ char lcd_temp[16];
 float setpoint = 30;
 
 double temp;
+uint32_t prev_counter;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -75,6 +77,30 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim == &htim4)
+  {
+    uint32_t counter = ENC_GetCounter(&henc1);
+    if (prev_counter == 100 && counter == 0)
+      setpoint++;
+    if (prev_counter == 0 && counter == 100)
+      setpoint--;
+    if (prev_counter < counter)
+      setpoint++;
+    if (prev_counter > counter)
+      setpoint--;
+
+    if (counter != prev_counter)
+    {
+      int tmp_int = PRECISION * setpoint;
+      response_len = sprintf((char *)response_buffer, "Setpoint: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
+      HAL_UART_Transmit(&huart3, response_buffer, response_len, 100);
+      prev_counter = counter;
+    }
+  }
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim == &htim5)
@@ -103,10 +129,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
     }
     LED_DIO_On(&led_green);
-    // HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
-    uint8_t tx_buffer[32];
-    int tx_msg_len = sprintf((char *)tx_buffer, "Encoder counter: %lu\n\r", ENC_GetCounter(&henc1));
-    HAL_UART_Transmit(&huart3, tx_buffer, tx_msg_len, 100);
+    HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
     LED_DIO_Off(&led_green);
   }
 }
@@ -217,6 +240,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   BMP2_Init(&bmp2dev);
   HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_ALL);
   HAL_TIM_Base_Start_IT(&htim5);
   PWM_DEVICE_PWM_Init(&heater);
   PWM_DEVICE_PWM_Init(&cooler);
