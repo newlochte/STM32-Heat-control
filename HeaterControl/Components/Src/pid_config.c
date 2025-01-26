@@ -2,7 +2,7 @@
 
 PID_TypeDef pid = {
     .state = PID_AUTO,
-    .dt = 1.0,
+    .dt = 0.2,
     .u = 0.0,
     .kp = 12,
     .ki = 0.2,

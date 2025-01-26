@@ -57,7 +57,7 @@
 /* USER CODE BEGIN PV */
 uint16_t response_len = 0;
 uint8_t response_buffer[128];
-uint8_t tx_buffer[10];
+uint8_t tx_buffer[12];
 
 float setpoint = 50;
 
@@ -92,6 +92,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         PWM_DEVICE_PWM_WriteDuty(&heater, 0);
       }
     }
+    if (BMP2_ReadData(&bmp2dev, NULL, &temp) < 0)
+      response_len = sprintf((char *)response_buffer, "Failed to read sensor\r\n");
+    else
+    {
+      int tmp_int = PRECISION * temp;
+      response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
+    }
+    HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
   }
 }
 
@@ -105,50 +113,50 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     switch (command.type)
     {
     case BAD_ARG:
-      response_len = sprintf((char *)response_buffer, "Złe polecenie \"%.8s\"\r", tx_buffer);
+      response_len = sprintf((char *)response_buffer, "Złe polecenie \"%.8s\"\r\n", tx_buffer);
       break;
     case READ_TEMPERATURE:
       if (BMP2_ReadData(&bmp2dev, NULL, &temp) < 0)
-        response_len = sprintf((char *)response_buffer, "Failed to read sensor");
+        response_len = sprintf((char *)response_buffer, "Failed to read sensor\r\n");
       else
       {
         tmp_int = PRECISION * temp;
-        response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+        response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       }
       break;
     case READ_FAN_PWM:
       tmp_int = PRECISION * PWM_DEVICE_PWM_ReadDuty(&cooler);
-      response_len = sprintf((char *)response_buffer, "Fan duty: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      response_len = sprintf((char *)response_buffer, "Fan duty: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       break;
     case READ_RESISTOR_PWM:
       tmp_int = PRECISION * PWM_DEVICE_PWM_ReadDuty(&heater);
-      response_len = sprintf((char *)response_buffer, "Resistor duty: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      response_len = sprintf((char *)response_buffer, "Resistor duty: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       break;
     case READ_SETPOINT:
       tmp_int = PRECISION * setpoint;
-      response_len = sprintf((char *)response_buffer, "Setpoint: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      response_len = sprintf((char *)response_buffer, "Setpoint: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       break;
     case WRITE_FAN_PWM:
       tmp_int = PRECISION * command.value;
-      response_len = sprintf((char *)response_buffer, "Fan duty set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      response_len = sprintf((char *)response_buffer, "Fan duty set to: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       PWM_DEVICE_PWM_WriteDuty(&cooler, command.value);
       break;
     case WRITE_RESISTOR_PWM:
       tmp_int = PRECISION * command.value;
-      response_len = sprintf((char *)response_buffer, "Resistor duty set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      response_len = sprintf((char *)response_buffer, "Resistor duty set to: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       PWM_DEVICE_PWM_WriteDuty(&heater, command.value);
       break;
     case WRITE_SETPOINT:
       tmp_int = PRECISION * command.value;
-      response_len = sprintf((char *)response_buffer, "Setpoint set to: %2u.%03u\r", tmp_int / PRECISION, tmp_int % PRECISION);
+      response_len = sprintf((char *)response_buffer, "Setpoint set to: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
       setpoint = command.value;
       break;
     case WRITE_PID_STATE:
-      response_len = sprintf((char *)response_buffer, "PID state changed to: %2d\r", command.value ? PID_AUTO : PID_MANUAL);
+      response_len = sprintf((char *)response_buffer, "PID state changed to: %2d\r\n", command.value ? PID_AUTO : PID_MANUAL);
       pid.state = command.value ? PID_AUTO : PID_MANUAL;
       break;
     default:
-      response_len = sprintf((char *)response_buffer, "Reached Unreachable! Did you forget something?\r");
+      response_len = sprintf((char *)response_buffer, "Reached Unreachable! Did you forget something?\r\n");
       break;
     }
     HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
