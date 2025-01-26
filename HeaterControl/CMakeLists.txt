@@ -59,6 +59,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/pid_config.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/led.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/led_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/encoder.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/encoder_config.c
 )
 
 # Add include paths

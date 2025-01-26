@@ -57,8 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BMP2_SCL_Pin GPIO_PIN_2
+#define BMP2_SCL_GPIO_Port GPIOE
 #define BMP2_CSB_Pin GPIO_PIN_4
 #define BMP2_CSB_GPIO_Port GPIOE
+#define BMP2_SDD_Pin GPIO_PIN_5
+#define BMP2_SDD_GPIO_Port GPIOE
+#define BMP2_SDA_Pin GPIO_PIN_6
+#define BMP2_SDA_GPIO_Port GPIOE
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
@@ -87,6 +93,10 @@ void Error_Handler(void);
 #define STLK_RX_GPIO_Port GPIOD
 #define STLK_TX_Pin GPIO_PIN_9
 #define STLK_TX_GPIO_Port GPIOD
+#define ENC_DT_Pin GPIO_PIN_12
+#define ENC_DT_GPIO_Port GPIOD
+#define ENC_CLK_Pin GPIO_PIN_13
+#define ENC_CLK_GPIO_Port GPIOD
 #define USB_PowerSwitchOn_Pin GPIO_PIN_6
 #define USB_PowerSwitchOn_GPIO_Port GPIOG
 #define USB_OverCurrent_Pin GPIO_PIN_7

@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include "command_parser.h"
 #include "led_config.h"
+#include "encoder_config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,7 +60,7 @@ uint16_t response_len = 0;
 uint8_t response_buffer[128];
 uint8_t tx_buffer[12];
 
-float setpoint = 50;
+float setpoint = 30;
 
 double temp;
 /* USER CODE END PV */
@@ -99,7 +100,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       int tmp_int = PRECISION * temp;
       response_len = sprintf((char *)response_buffer, "Temperature: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
     }
-    HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
+    LED_DIO_On(&led_green);
+    // HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
+    uint8_t tx_buffer[32];
+    int tx_msg_len = sprintf((char *)tx_buffer, "Encoder counter: %lu\n\r", ENC_GetCounter(&henc1));
+    HAL_UART_Transmit(&huart3, tx_buffer, tx_msg_len, 100);
+    LED_DIO_Off(&led_green);
   }
 }
 
@@ -159,7 +165,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       response_len = sprintf((char *)response_buffer, "Reached Unreachable! Did you forget something?\r\n");
       break;
     }
+    LED_DIO_On(&led_green);
     HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
+    LED_DIO_Off(&led_green);
 
     HAL_UART_Receive_IT(&huart3, tx_buffer, sizeof(tx_buffer));
   }
@@ -210,6 +218,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim5);
   PWM_DEVICE_PWM_Init(&heater);
   PWM_DEVICE_PWM_Init(&cooler);
+  ENC_Init(&henc1);
   HAL_UART_Receive_IT(&huart3, tx_buffer, sizeof(tx_buffer));
   /* USER CODE END 2 */
 
