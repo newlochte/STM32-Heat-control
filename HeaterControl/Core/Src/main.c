@@ -131,8 +131,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         PWM_DEVICE_PWM_WriteDuty(&cooler, -1 * signal * 100.0 / pid.abs_max_signal);
         PWM_DEVICE_PWM_WriteDuty(&heater, 0);
       }
+      char sign = '+';
+      if (signal < 0)
+      {
+        signal *= -1;
+        sign = '-';
+      }
       tmp_int = PRECISION * signal;
-      response_len = sprintf((char *)response_buffer, "Signal: %2u.%03u\r\n", tmp_int / PRECISION, tmp_int % PRECISION);
+      response_len = sprintf((char *)response_buffer, "Signal: %c%2u.%03u\r\n", sign, tmp_int / PRECISION, tmp_int % PRECISION);
     }
     LED_DIO_On(&led_green);
     HAL_UART_Transmit(&huart3, response_buffer, response_len, TRANSMIT_TIMEOUT);
