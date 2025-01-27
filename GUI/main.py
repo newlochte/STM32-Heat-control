@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import time
 
+setpoint_lines = []
+
 def read_serial():
     """Function to read data from the serial port."""
     global setpoint_value
@@ -62,11 +64,17 @@ def update_plot(temp):
     ax.set_xlim(0, 300)  # Fixed x-axis for the last 5 minutes
     ax.set_ylim(0, 100)  # Fixed y-axis from 0 to 100
 
-    # Update setpoint line and ±1°C lines
+    # Remove old axhlines
+    global setpoint_lines  # Ensure setpoint_lines is accessible
+    for line in setpoint_lines:
+        line.remove()  # Remove the line from the plot
+    setpoint_lines = []  # Clear the list of old lines
+
+    # Add new setpoint line and ±1°C lines
     if setpoint_value is not None:
-        ax.axhline(setpoint_value, color='green', linewidth=2)
-        ax.axhline(setpoint_value + 1, color='blue', linestyle='--', linewidth=2)
-        ax.axhline(setpoint_value - 1, color='blue', linestyle='--', linewidth=2)
+        setpoint_lines.append(ax.axhline(setpoint_value, color='green', linewidth=2))
+        setpoint_lines.append(ax.axhline(setpoint_value + 1, color='blue', linestyle='--', linewidth=2))
+        setpoint_lines.append(ax.axhline(setpoint_value - 1, color='blue', linestyle='--', linewidth=2))
 
     canvas.draw()
 
