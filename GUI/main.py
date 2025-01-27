@@ -8,6 +8,7 @@ import time
 
 def read_serial():
     """Function to read data from the serial port."""
+    global setpoint_value
     while True:
         try:
             if ser.is_open:
@@ -16,9 +17,17 @@ def read_serial():
                     temperature = line.split(":")[1].strip()
                     update_temperature(temperature)
                     update_plot(float(temperature))
+                elif line.startswith("Setpoint:"):
+                    print(line)
+                    setpoint_value = float(line.split(":")[1].strip())
+                    setpoint_label.config(text=f"Setpoint: {setpoint_value} °C")
+                    print(setpoint_value)
+                elif line.startswith("Signal:"):
+                    pass
                 else:
                     update_message_list(line)
         except Exception as e:
+            print("line: ", line)
             print(f"Error reading serial data: {e}")
             break
 
@@ -61,13 +70,15 @@ def update_plot(temp):
 
     canvas.draw()
 
-def send_command():
+def send_command(command = None):
     """Send a command to the serial port."""
     try:
         if ser.is_open:
-            command = command_entry.get().ljust(12)  # Pad the command to 12 characters
-            ser.write((command).encode('utf-8'))
-            command_entry.delete(0, tk.END)  # Clear the entry field
+            if not command:
+                command = command_entry.get().ljust(12)  # Pad the command to 12 characters
+            print(command, 'newline')
+            ser.write(command.encode('ascii'))
+            # command_entry.delete(0, tk.END)  # Clear the entry field
         else:
             messagebox.showwarning("Warning", "Serial port is not connected.")
     except Exception as e:
@@ -95,9 +106,10 @@ def connect_to_serial():
         baudrate = baudrate_entry.get()
         ser = serial.Serial(port, int(baudrate), timeout=1)
         threading.Thread(target=read_serial, daemon=True).start()
-        messagebox.showinfo("Connection Status", "Connected to the serial port successfully!")
+        # messagebox.showinfo("Connection Status", "Connected to the serial port successfully!")
         connect_button.config(state=tk.DISABLED)
         disconnect_button.config(state=tk.NORMAL)
+        send_command("r s")
     except Exception as e:
         messagebox.showerror("Connection Error", f"Failed to connect to serial port: {e}")
 
@@ -107,7 +119,7 @@ def disconnect_from_serial():
     try:
         if ser.is_open:
             ser.close()
-        messagebox.showinfo("Connection Status", "Disconnected from the serial port.")
+        # messagebox.showinfo("Connection Status", "Disconnected from the serial port.")
         connect_button.config(state=tk.NORMAL)
         disconnect_button.config(state=tk.DISABLED)
     except Exception as e:
@@ -151,14 +163,8 @@ disconnect_button = tk.Button(serial_frame, text="Disconnect", command=disconnec
 disconnect_button.grid(row=3, column=0, columnspan=2, pady=5)
 
 # Temperature Display
-temperature_label = tk.Label(root, text="Temperature: -- °C", font=("Arial", 16))
+temperature_label = tk.Label(control_frame, text="Temperature: -- °C", font=("Arial", 16))
 temperature_label.pack(pady=10)
-
-# Message Listbox
-tk.Label(root, text="Last 5 Messages:").pack(pady=5)
-messages = []  # List to store the last 5 messages
-message_listbox = tk.Listbox(root, height=5, width=50)
-message_listbox.pack(pady=5)
 
 # Command Entry Frame
 command_frame = tk.Frame(control_frame)
@@ -187,8 +193,14 @@ set_setpoint_button = tk.Button(setpoint_frame, text="Set Setpoint", command=set
 set_setpoint_button.grid(row=0, column=2, padx=5)
 
 # Setpoint Display
-setpoint_label = tk.Label(root, text="Setpoint: -- °C", font=("Arial", 14))
+setpoint_label = tk.Label(control_frame, text="Setpoint: -- °C", font=("Arial", 14))
 setpoint_label.pack(pady=5)
+
+# Message Listbox
+tk.Label(control_frame, text="Last 5 Messages:").pack(pady=5)
+messages = []  # List to store the last 5 messages
+message_listbox = tk.Listbox(control_frame, height=5, width=50)
+message_listbox.pack(pady=5)
 
 # Temperature Plot
 plot_frame = tk.Frame(main_frame)
